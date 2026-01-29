@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Table Extractor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 20px;
+        }
+        .drop-zone {
+            border: 3px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background: #fff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: #007bff;
+            background: #f0f7ff;
+        }
+        .drop-zone p {
+            margin: 0 0 10px 0;
+            color: #666;
+            font-size: 18px;
+        }
+        .drop-zone small {
+            color: #999;
+        }
+        #file-input {
+            display: none;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .status.loading {
+            display: block;
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status.error {
+            display: block;
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.success {
+            display: block;
+            background: #d4edda;
+            color: #155724;
+        }
+        .tables-container {
+            margin-top: 20px;
+        }
+        .table-card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .table-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .table-header h3 {
+            margin: 0;
+            color: #333;
+            font-size: 16px;
+        }
+        .table-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .table-content {
+            padding: 20px;
+            overflow-x: auto;
+        }
+        .extracted-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .extracted-table th,
+        .extracted-table td {
+            border: 1px solid #dee2e6;
+            padding: 10px 12px;
+            text-align: left;
+        }
+        .extracted-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        .extracted-table tr:hover {
+            background: #f5f5f5;
+        }
+        .no-tables {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            background: #fff;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .settings {
+            background: #fff;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .settings label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #555;
+            font-size: 14px;
+        }
+        .settings input[type="number"] {
+            width: 60px;
+            padding: 5px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .settings input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+        .copy-toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 5px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+        .copy-toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <h1>PDF Table Extractor</h1>
+    <p class="subtitle">Upload a PDF to extract tables. Copy as plain text or Markdown.</p>
+
+    <div class="drop-zone" id="drop-zone">
+        <p>Drag & drop a PDF file here</p>
+        <p><small>or click to select a file</small></p>
+        <input type="file" id="file-input" accept=".pdf,application/pdf">
+    </div>
+
+    <div class="settings">
+        <label>
+            <input type="checkbox" id="first-row-header" checked>
+            First row as header
+        </label>
+        <label>
+            Min columns:
+            <input type="number" id="min-cols" value="2" min="2" max="20">
+        </label>
+        <label>
+            Min rows:
+            <input type="number" id="min-rows" value="2" min="2" max="100">
+        </label>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <div class="tables-container" id="tables-container"></div>
+
+    <div class="copy-toast" id="copy-toast">Copied to clipboard!</div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const status = document.getElementById('status');
+        const tablesContainer = document.getElementById('tables-container');
+        const copyToast = document.getElementById('copy-toast');
+
+        // Drop zone events
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'application/pdf') {
+                processPDF(file);
+            } else {
+                showStatus('Please upload a PDF file.', 'error');
+            }
+        });
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) processPDF(file);
+        });
+
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = 'status ' + type;
+        }
+
+        function showToast(message) {
+            copyToast.textContent = message;
+            copyToast.classList.add('show');
+            setTimeout(() => copyToast.classList.remove('show'), 2000);
+        }
+
+        async function processPDF(file) {
+            showStatus('Processing PDF...', 'loading');
+            tablesContainer.innerHTML = '';
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+                const allTables = [];
+
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                    showStatus(`Processing page ${pageNum} of ${pdf.numPages}...`, 'loading');
+                    const page = await pdf.getPage(pageNum);
+                    const textContent = await page.getTextContent();
+                    const tables = extractTablesFromPage(textContent, pageNum);
+                    allTables.push(...tables);
+                }
+
+                if (allTables.length === 0) {
+                    showStatus('No tables found in this PDF.', 'error');
+                    tablesContainer.innerHTML = '<div class="no-tables">No tables detected. Try adjusting the minimum columns/rows settings and re-upload.</div>';
+                } else {
+                    showStatus(`Found ${allTables.length} table(s)!`, 'success');
+                    renderTables(allTables);
+                }
+            } catch (error) {
+                console.error(error);
+                showStatus('Error processing PDF: ' + error.message, 'error');
+            }
+        }
+
+        function extractTablesFromPage(textContent, pageNum) {
+            const items = textContent.items;
+            if (items.length === 0) return [];
+
+            // Group text items by their Y position (rows)
+            const rowTolerance = 5;
+            const rows = [];
+
+            items.forEach(item => {
+                const y = Math.round(item.transform[5]);
+                const x = item.transform[4];
+                const text = item.str.trim();
+
+                if (!text) return;
+
+                let foundRow = rows.find(r => Math.abs(r.y - y) < rowTolerance);
+                if (!foundRow) {
+                    foundRow = { y, items: [] };
+                    rows.push(foundRow);
+                }
+                foundRow.items.push({ x, text, width: item.width });
+            });
+
+            // Sort rows by Y position (top to bottom, PDF coords are bottom-up)
+            rows.sort((a, b) => b.y - a.y);
+
+            // Sort items within each row by X position
+            rows.forEach(row => {
+                row.items.sort((a, b) => a.x - b.x);
+            });
+
+            // Detect column boundaries by finding common X positions
+            const allXPositions = [];
+            rows.forEach(row => {
+                row.items.forEach(item => {
+                    allXPositions.push(item.x);
+                });
+            });
+
+            // Cluster X positions to find columns
+            const colTolerance = 15;
+            const columnStarts = clusterPositions(allXPositions, colTolerance);
+
+            if (columnStarts.length < 2) return [];
+
+            // Build table data
+            const tableData = rows.map(row => {
+                const rowData = new Array(columnStarts.length).fill('');
+                row.items.forEach(item => {
+                    const colIndex = findColumnIndex(item.x, columnStarts, colTolerance);
+                    if (colIndex !== -1) {
+                        if (rowData[colIndex]) {
+                            rowData[colIndex] += ' ' + item.text;
+                        } else {
+                            rowData[colIndex] = item.text;
+                        }
+                    }
+                });
+                return rowData;
+            });
+
+            // Find contiguous table regions
+            const tables = findTableRegions(tableData, pageNum);
+            return tables;
+        }
+
+        function clusterPositions(positions, tolerance) {
+            if (positions.length === 0) return [];
+
+            const sorted = [...positions].sort((a, b) => a - b);
+            const clusters = [];
+            let currentCluster = [sorted[0]];
+
+            for (let i = 1; i < sorted.length; i++) {
+                if (sorted[i] - sorted[i - 1] < tolerance) {
+                    currentCluster.push(sorted[i]);
+                } else {
+                    clusters.push(currentCluster);
+                    currentCluster = [sorted[i]];
+                }
+            }
+            clusters.push(currentCluster);
+
+            // Return the average position of each cluster
+            return clusters.map(c => c.reduce((a, b) => a + b, 0) / c.length);
+        }
+
+        function findColumnIndex(x, columnStarts, tolerance) {
+            for (let i = columnStarts.length - 1; i >= 0; i--) {
+                if (x >= columnStarts[i] - tolerance) {
+                    return i;
+                }
+            }
+            return 0;
+        }
+
+        function findTableRegions(tableData, pageNum) {
+            const minCols = parseInt(document.getElementById('min-cols').value) || 2;
+            const minRows = parseInt(document.getElementById('min-rows').value) || 2;
+
+            const tables = [];
+            let currentTable = [];
+
+            tableData.forEach((row, index) => {
+                const filledCells = row.filter(cell => cell.trim() !== '').length;
+
+                if (filledCells >= minCols) {
+                    currentTable.push(row);
+                } else {
+                    if (currentTable.length >= minRows) {
+                        tables.push({
+                            page: pageNum,
+                            data: cleanTable(currentTable)
+                        });
+                    }
+                    currentTable = [];
+                }
+            });
+
+            // Don't forget the last table
+            if (currentTable.length >= minRows) {
+                tables.push({
+                    page: pageNum,
+                    data: cleanTable(currentTable)
+                });
+            }
+
+            return tables;
+        }
+
+        function cleanTable(tableData) {
+            // Remove empty columns
+            const numCols = tableData[0]?.length || 0;
+            const nonEmptyCols = [];
+
+            for (let col = 0; col < numCols; col++) {
+                const hasContent = tableData.some(row => row[col]?.trim());
+                if (hasContent) nonEmptyCols.push(col);
+            }
+
+            return tableData.map(row => nonEmptyCols.map(col => row[col] || ''));
+        }
+
+        function renderTables(tables) {
+            tablesContainer.innerHTML = '';
+
+            tables.forEach((table, index) => {
+                const card = document.createElement('div');
+                card.className = 'table-card';
+
+                const useHeader = document.getElementById('first-row-header').checked;
+                const headerRow = useHeader ? table.data[0] : null;
+                const bodyRows = useHeader ? table.data.slice(1) : table.data;
+
+                card.innerHTML = `
+                    <div class="table-header">
+                        <h3>Table ${index + 1} (Page ${table.page}) - ${table.data.length} rows, ${table.data[0]?.length || 0} columns</h3>
+                        <div class="table-actions">
+                            <button class="btn btn-primary" onclick="copyAsText(${index})">Copy as Text</button>
+                            <button class="btn btn-secondary" onclick="copyAsMarkdown(${index})">Copy as Markdown</button>
+                            <button class="btn btn-success" onclick="copyAsCSV(${index})">Copy as CSV</button>
+                        </div>
+                    </div>
+                    <div class="table-content">
+                        <table class="extracted-table" id="table-${index}">
+                            ${headerRow ? `<thead><tr>${headerRow.map(cell => `<th>${escapeHtml(cell)}</th>`).join('')}</tr></thead>` : ''}
+                            <tbody>
+                                ${bodyRows.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                tablesContainer.appendChild(card);
+            });
+
+            // Store tables data for copy functions
+            window.extractedTables = tables;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function copyAsText(index) {
+            const table = window.extractedTables[index];
+            const text = table.data.map(row => row.join('\t')).join('\n');
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Copied as tab-separated text!');
+            });
+        }
+
+        function copyAsMarkdown(index) {
+            const table = window.extractedTables[index];
+            const useHeader = document.getElementById('first-row-header').checked;
+
+            let markdown = '';
+            const data = table.data;
+
+            if (data.length === 0) return;
+
+            if (useHeader) {
+                // Header row
+                markdown += '| ' + data[0].map(cell => cell.replace(/\|/g, '\\|')).join(' | ') + ' |\n';
+                // Separator
+                markdown += '| ' + data[0].map(() => '---').join(' | ') + ' |\n';
+                // Body rows
+                for (let i = 1; i < data.length; i++) {
+                    markdown += '| ' + data[i].map(cell => cell.replace(/\|/g, '\\|')).join(' | ') + ' |\n';
+                }
+            } else {
+                // No header - still need separator after first row for valid markdown
+                data.forEach((row, i) => {
+                    markdown += '| ' + row.map(cell => cell.replace(/\|/g, '\\|')).join(' | ') + ' |\n';
+                    if (i === 0) {
+                        markdown += '| ' + row.map(() => '---').join(' | ') + ' |\n';
+                    }
+                });
+            }
+
+            navigator.clipboard.writeText(markdown).then(() => {
+                showToast('Copied as Markdown!');
+            });
+        }
+
+        function copyAsCSV(index) {
+            const table = window.extractedTables[index];
+            const csv = table.data.map(row =>
+                row.map(cell => {
+                    // Escape quotes and wrap in quotes if contains comma, quote, or newline
+                    if (cell.includes(',') || cell.includes('"') || cell.includes('\n')) {
+                        return '"' + cell.replace(/"/g, '""') + '"';
+                    }
+                    return cell;
+                }).join(',')
+            ).join('\n');
+
+            navigator.clipboard.writeText(csv).then(() => {
+                showToast('Copied as CSV!');
+            });
+        }
+    </script>
+</body>
+</html>
