@@ -11,7 +11,7 @@
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
             background: #f5f5f5;
@@ -45,6 +45,13 @@
         .drop-zone small {
             color: #999;
         }
+        .drop-zone.has-file {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+        .drop-zone.has-file p {
+            color: #28a745;
+        }
         #file-input {
             display: none;
         }
@@ -68,6 +75,68 @@
             display: block;
             background: #d4edda;
             color: #155724;
+        }
+        .mode-toggle {
+            display: flex;
+            gap: 0;
+            margin: 20px 0;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            width: fit-content;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .mode-btn {
+            padding: 12px 24px;
+            border: none;
+            background: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.2s;
+        }
+        .mode-btn:hover {
+            background: #f5f5f5;
+        }
+        .mode-btn.active {
+            background: #007bff;
+            color: white;
+        }
+        .settings {
+            background: #fff;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .settings label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #555;
+            font-size: 14px;
+        }
+        .settings input[type="number"] {
+            width: 60px;
+            padding: 5px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .settings input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+        .settings-group {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            flex: 1;
         }
         .tables-container {
             margin-top: 20px;
@@ -97,6 +166,7 @@
         .table-actions {
             display: flex;
             gap: 8px;
+            flex-wrap: wrap;
         }
         .btn {
             padding: 8px 16px;
@@ -106,23 +176,57 @@
             font-size: 14px;
             transition: all 0.2s;
         }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
         .btn-primary {
             background: #007bff;
             color: white;
         }
-        .btn-primary:hover {
+        .btn-primary:hover:not(:disabled) {
             background: #0056b3;
         }
         .btn-secondary {
             background: #6c757d;
             color: white;
         }
-        .btn-secondary:hover {
+        .btn-secondary:hover:not(:disabled) {
             background: #545b62;
         }
         .btn-success {
             background: #28a745;
             color: white;
+        }
+        .btn-success:hover:not(:disabled) {
+            background: #1e7e34;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover:not(:disabled) {
+            background: #c82333;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .btn-warning:hover:not(:disabled) {
+            background: #e0a800;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #007bff;
+            color: #007bff;
+        }
+        .btn-outline:hover:not(:disabled) {
+            background: #007bff;
+            color: white;
+        }
+        .btn-sm {
+            padding: 4px 10px;
+            font-size: 12px;
         }
         .table-content {
             padding: 20px;
@@ -154,33 +258,6 @@
             border-radius: 8px;
             margin-top: 20px;
         }
-        .settings {
-            background: #fff;
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin: 20px 0;
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .settings label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #555;
-            font-size: 14px;
-        }
-        .settings input[type="number"] {
-            width: 60px;
-            padding: 5px 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        .settings input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-        }
         .copy-toast {
             position: fixed;
             bottom: 20px;
@@ -196,36 +273,270 @@
         .copy-toast.show {
             opacity: 1;
         }
+
+        /* Manual mode styles */
+        .manual-container {
+            display: none;
+        }
+        .manual-container.active {
+            display: block;
+        }
+        .auto-container.active {
+            display: block;
+        }
+        .auto-container {
+            display: none;
+        }
+        .manual-toolbar {
+            background: #fff;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .manual-toolbar .divider {
+            width: 1px;
+            height: 30px;
+            background: #ddd;
+            margin: 0 10px;
+        }
+        .row-list {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .row-list-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            font-weight: 600;
+            color: #333;
+        }
+        .row-item {
+            display: flex;
+            align-items: stretch;
+            border-bottom: 1px solid #eee;
+            transition: background 0.2s;
+        }
+        .row-item:last-child {
+            border-bottom: none;
+        }
+        .row-item:hover {
+            background: #f8f9fa;
+        }
+        .row-item.selected {
+            background: #e7f3ff;
+        }
+        .row-item.table-start {
+            border-top: 3px solid #007bff;
+        }
+        .row-item.marked-header {
+            background: #fff3cd;
+        }
+        .row-checkbox {
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            border-right: 1px solid #eee;
+        }
+        .row-checkbox input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .row-page {
+            padding: 12px 10px;
+            min-width: 50px;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            border-right: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .row-cells {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            padding: 8px;
+            gap: 5px;
+            align-items: center;
+        }
+        .cell-item {
+            background: #f0f0f0;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .cell-item:hover {
+            background: #e0e0e0;
+        }
+        .cell-item.deleted {
+            background: #f8d7da;
+            text-decoration: line-through;
+            color: #999;
+        }
+        .cell-item .delete-cell {
+            display: none;
+            position: absolute;
+            right: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            font-size: 10px;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .cell-item:hover .delete-cell {
+            display: block;
+        }
+        .row-actions {
+            padding: 8px;
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        .table-group {
+            margin-bottom: 20px;
+        }
+        .table-group-header {
+            background: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .table-group-content {
+            border: 2px solid #007bff;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+        }
+        .selection-info {
+            font-size: 14px;
+            color: #666;
+        }
+        .empty-cell {
+            color: #999;
+            font-style: italic;
+        }
+
+        /* Created tables section */
+        .created-tables {
+            margin-top: 30px;
+        }
+        .created-tables h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
     </style>
 </head>
 <body>
     <h1>PDF Table Extractor</h1>
-    <p class="subtitle">Upload a PDF to extract tables. Copy as plain text or Markdown.</p>
+    <p class="subtitle">Upload a PDF to extract tables. Use Auto mode for quick extraction or Manual mode for fine control.</p>
 
     <div class="drop-zone" id="drop-zone">
-        <p>Drag & drop a PDF file here</p>
+        <p id="drop-zone-text">Drag & drop a PDF file here</p>
         <p><small>or click to select a file</small></p>
         <input type="file" id="file-input" accept=".pdf,application/pdf">
     </div>
 
-    <div class="settings">
-        <label>
-            <input type="checkbox" id="first-row-header" checked>
-            First row as header
-        </label>
-        <label>
-            Min columns:
-            <input type="number" id="min-cols" value="2" min="2" max="20">
-        </label>
-        <label>
-            Min rows:
-            <input type="number" id="min-rows" value="2" min="2" max="100">
-        </label>
+    <div class="mode-toggle">
+        <button class="mode-btn active" id="auto-mode-btn" onclick="setMode('auto')">Auto Extract</button>
+        <button class="mode-btn" id="manual-mode-btn" onclick="setMode('manual')">Manual Mode</button>
+    </div>
+
+    <div class="settings" id="settings">
+        <div class="settings-group">
+            <label>
+                <input type="checkbox" id="first-row-header" checked>
+                First row as header
+            </label>
+            <label>
+                Row tolerance:
+                <input type="number" id="row-tolerance" value="5" min="1" max="50" title="Y-distance tolerance for grouping text into same row">
+            </label>
+            <label>
+                Column tolerance:
+                <input type="number" id="col-tolerance" value="15" min="5" max="100" title="X-distance tolerance for detecting columns">
+            </label>
+            <label>
+                Min columns:
+                <input type="number" id="min-cols" value="2" min="1" max="20">
+            </label>
+            <label>
+                Min rows:
+                <input type="number" id="min-rows" value="2" min="1" max="100">
+            </label>
+            <label>
+                <input type="checkbox" id="merge-adjacent" checked>
+                Merge adjacent tables
+            </label>
+        </div>
+        <button class="btn btn-primary" id="re-extract-btn" onclick="reExtract()" style="display: none;">
+            Re-extract with new settings
+        </button>
     </div>
 
     <div class="status" id="status"></div>
 
-    <div class="tables-container" id="tables-container"></div>
+    <!-- Auto mode container -->
+    <div class="auto-container active" id="auto-container">
+        <div class="tables-container" id="tables-container"></div>
+    </div>
+
+    <!-- Manual mode container -->
+    <div class="manual-container" id="manual-container">
+        <div class="manual-toolbar">
+            <span class="selection-info" id="selection-info">0 rows selected</span>
+            <div class="divider"></div>
+            <button class="btn btn-success btn-sm" onclick="createTableFromSelected()" id="create-table-btn" disabled>
+                Create Table from Selected
+            </button>
+            <button class="btn btn-warning btn-sm" onclick="markAsHeader()" id="mark-header-btn" disabled>
+                Mark as Header
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="deleteSelectedRows()" id="delete-rows-btn" disabled>
+                Delete Selected Rows
+            </button>
+            <div class="divider"></div>
+            <button class="btn btn-outline btn-sm" onclick="selectAll()">Select All</button>
+            <button class="btn btn-outline btn-sm" onclick="selectNone()">Select None</button>
+            <button class="btn btn-outline btn-sm" onclick="restoreAllRows()">Restore All</button>
+        </div>
+
+        <div class="row-list" id="row-list">
+            <div class="row-list-header">
+                Detected Rows <span id="row-count"></span>
+            </div>
+            <div id="row-items"></div>
+        </div>
+
+        <div class="created-tables" id="created-tables-section" style="display: none;">
+            <h2>Created Tables</h2>
+            <div id="created-tables-container"></div>
+        </div>
+    </div>
 
     <div class="copy-toast" id="copy-toast">Copied to clipboard!</div>
 
@@ -233,10 +544,18 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
         const dropZone = document.getElementById('drop-zone');
+        const dropZoneText = document.getElementById('drop-zone-text');
         const fileInput = document.getElementById('file-input');
         const status = document.getElementById('status');
         const tablesContainer = document.getElementById('tables-container');
         const copyToast = document.getElementById('copy-toast');
+        const reExtractBtn = document.getElementById('re-extract-btn');
+
+        let currentFile = null;
+        let currentMode = 'auto';
+        let rawRows = []; // All detected rows from PDF
+        let manualRows = []; // Rows for manual mode with selection state
+        let createdTables = []; // Tables created in manual mode
 
         // Drop zone events
         dropZone.addEventListener('click', () => fileInput.click());
@@ -252,6 +571,8 @@
             dropZone.classList.remove('drag-over');
             const file = e.dataTransfer.files[0];
             if (file && file.type === 'application/pdf') {
+                currentFile = file;
+                updateDropZone();
                 processPDF(file);
             } else {
                 showStatus('Please upload a PDF file.', 'error');
@@ -259,8 +580,45 @@
         });
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
-            if (file) processPDF(file);
+            if (file) {
+                currentFile = file;
+                updateDropZone();
+                processPDF(file);
+            }
         });
+
+        function updateDropZone() {
+            if (currentFile) {
+                dropZone.classList.add('has-file');
+                dropZoneText.textContent = `Loaded: ${currentFile.name}`;
+                reExtractBtn.style.display = 'inline-block';
+            } else {
+                dropZone.classList.remove('has-file');
+                dropZoneText.textContent = 'Drag & drop a PDF file here';
+                reExtractBtn.style.display = 'none';
+            }
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('auto-mode-btn').classList.toggle('active', mode === 'auto');
+            document.getElementById('manual-mode-btn').classList.toggle('active', mode === 'manual');
+            document.getElementById('auto-container').classList.toggle('active', mode === 'auto');
+            document.getElementById('manual-container').classList.toggle('active', mode === 'manual');
+
+            // Update settings visibility based on mode
+            document.getElementById('min-cols').closest('label').style.display = mode === 'auto' ? 'flex' : 'none';
+            document.getElementById('min-rows').closest('label').style.display = mode === 'auto' ? 'flex' : 'none';
+            document.getElementById('merge-adjacent').closest('label').style.display = mode === 'auto' ? 'flex' : 'none';
+
+            if (currentFile && rawRows.length > 0) {
+                if (mode === 'manual') {
+                    renderManualMode();
+                } else {
+                    reExtract();
+                }
+            }
+        }
 
         function showStatus(message, type) {
             status.textContent = message;
@@ -273,30 +631,60 @@
             setTimeout(() => copyToast.classList.remove('show'), 2000);
         }
 
+        function reExtract() {
+            if (currentFile) {
+                processPDF(currentFile);
+            }
+        }
+
         async function processPDF(file) {
             showStatus('Processing PDF...', 'loading');
             tablesContainer.innerHTML = '';
+            rawRows = [];
+            manualRows = [];
+
+            const rowTolerance = parseInt(document.getElementById('row-tolerance').value) || 5;
+            const colTolerance = parseInt(document.getElementById('col-tolerance').value) || 15;
 
             try {
                 const arrayBuffer = await file.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-                const allTables = [];
-
                 for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                     showStatus(`Processing page ${pageNum} of ${pdf.numPages}...`, 'loading');
                     const page = await pdf.getPage(pageNum);
                     const textContent = await page.getTextContent();
-                    const tables = extractTablesFromPage(textContent, pageNum);
-                    allTables.push(...tables);
+                    const pageRows = extractRowsFromPage(textContent, pageNum, rowTolerance, colTolerance);
+                    rawRows.push(...pageRows);
                 }
 
-                if (allTables.length === 0) {
-                    showStatus('No tables found in this PDF.', 'error');
-                    tablesContainer.innerHTML = '<div class="no-tables">No tables detected. Try adjusting the minimum columns/rows settings and re-upload.</div>';
+                if (rawRows.length === 0) {
+                    showStatus('No text content found in this PDF.', 'error');
+                    return;
+                }
+
+                // Initialize manual rows
+                manualRows = rawRows.map((row, index) => ({
+                    ...row,
+                    id: index,
+                    selected: false,
+                    deleted: false,
+                    isHeader: false,
+                    deletedCells: new Set()
+                }));
+
+                if (currentMode === 'auto') {
+                    const tables = buildTablesFromRows(rawRows);
+                    if (tables.length === 0) {
+                        showStatus('No tables found. Try adjusting settings or use Manual Mode.', 'error');
+                        tablesContainer.innerHTML = '<div class="no-tables">No tables detected. Try adjusting the tolerance/min columns/rows settings, or switch to Manual Mode for fine-grained control.</div>';
+                    } else {
+                        showStatus(`Found ${tables.length} table(s)!`, 'success');
+                        renderTables(tables);
+                    }
                 } else {
-                    showStatus(`Found ${allTables.length} table(s)!`, 'success');
-                    renderTables(allTables);
+                    showStatus(`Extracted ${rawRows.length} rows. Select rows to create tables.`, 'success');
+                    renderManualMode();
                 }
             } catch (error) {
                 console.error(error);
@@ -304,12 +692,11 @@
             }
         }
 
-        function extractTablesFromPage(textContent, pageNum) {
+        function extractRowsFromPage(textContent, pageNum, rowTolerance, colTolerance) {
             const items = textContent.items;
             if (items.length === 0) return [];
 
             // Group text items by their Y position (rows)
-            const rowTolerance = 5;
             const rows = [];
 
             items.forEach(item => {
@@ -321,7 +708,7 @@
 
                 let foundRow = rows.find(r => Math.abs(r.y - y) < rowTolerance);
                 if (!foundRow) {
-                    foundRow = { y, items: [] };
+                    foundRow = { y, items: [], page: pageNum };
                     rows.push(foundRow);
                 }
                 foundRow.items.push({ x, text, width: item.width });
@@ -335,7 +722,7 @@
                 row.items.sort((a, b) => a.x - b.x);
             });
 
-            // Detect column boundaries by finding common X positions
+            // Detect column boundaries across all rows
             const allXPositions = [];
             rows.forEach(row => {
                 row.items.forEach(item => {
@@ -343,31 +730,28 @@
                 });
             });
 
-            // Cluster X positions to find columns
-            const colTolerance = 15;
             const columnStarts = clusterPositions(allXPositions, colTolerance);
 
-            if (columnStarts.length < 2) return [];
-
-            // Build table data
-            const tableData = rows.map(row => {
-                const rowData = new Array(columnStarts.length).fill('');
+            // Build row data with cells aligned to columns
+            return rows.map(row => {
+                const cells = new Array(columnStarts.length).fill('');
                 row.items.forEach(item => {
                     const colIndex = findColumnIndex(item.x, columnStarts, colTolerance);
                     if (colIndex !== -1) {
-                        if (rowData[colIndex]) {
-                            rowData[colIndex] += ' ' + item.text;
+                        if (cells[colIndex]) {
+                            cells[colIndex] += ' ' + item.text;
                         } else {
-                            rowData[colIndex] = item.text;
+                            cells[colIndex] = item.text;
                         }
                     }
                 });
-                return rowData;
+                return {
+                    page: row.page,
+                    y: row.y,
+                    cells: cells,
+                    rawItems: row.items
+                };
             });
-
-            // Find contiguous table regions
-            const tables = findTableRegions(tableData, pageNum);
-            return tables;
         }
 
         function clusterPositions(positions, tolerance) {
@@ -387,7 +771,6 @@
             }
             clusters.push(currentCluster);
 
-            // Return the average position of each cluster
             return clusters.map(c => c.reduce((a, b) => a + b, 0) / c.length);
         }
 
@@ -400,42 +783,84 @@
             return 0;
         }
 
-        function findTableRegions(tableData, pageNum) {
+        function buildTablesFromRows(rows) {
             const minCols = parseInt(document.getElementById('min-cols').value) || 2;
             const minRows = parseInt(document.getElementById('min-rows').value) || 2;
+            const mergeAdjacent = document.getElementById('merge-adjacent').checked;
 
             const tables = [];
             let currentTable = [];
+            let currentPage = null;
 
-            tableData.forEach((row, index) => {
-                const filledCells = row.filter(cell => cell.trim() !== '').length;
+            rows.forEach((row, index) => {
+                const filledCells = row.cells.filter(cell => cell.trim() !== '').length;
+                const isTableRow = filledCells >= minCols;
 
-                if (filledCells >= minCols) {
+                if (isTableRow) {
+                    // Check if we should start a new table (different page and not merging)
+                    if (currentTable.length > 0 && row.page !== currentPage && !mergeAdjacent) {
+                        if (currentTable.length >= minRows) {
+                            tables.push({
+                                page: currentPage,
+                                data: cleanTable(currentTable.map(r => r.cells))
+                            });
+                        }
+                        currentTable = [];
+                    }
                     currentTable.push(row);
+                    currentPage = row.page;
                 } else {
+                    // Non-table row - end current table
                     if (currentTable.length >= minRows) {
                         tables.push({
-                            page: pageNum,
-                            data: cleanTable(currentTable)
+                            page: currentTable[0].page,
+                            data: cleanTable(currentTable.map(r => r.cells))
                         });
                     }
                     currentTable = [];
+                    currentPage = null;
                 }
             });
 
             // Don't forget the last table
             if (currentTable.length >= minRows) {
                 tables.push({
-                    page: pageNum,
-                    data: cleanTable(currentTable)
+                    page: currentTable[0].page,
+                    data: cleanTable(currentTable.map(r => r.cells))
                 });
+            }
+
+            // Merge adjacent tables if enabled
+            if (mergeAdjacent && tables.length > 1) {
+                return mergeAdjacentTables(tables);
             }
 
             return tables;
         }
 
+        function mergeAdjacentTables(tables) {
+            if (tables.length <= 1) return tables;
+
+            const merged = [];
+            let current = { ...tables[0], data: [...tables[0].data] };
+
+            for (let i = 1; i < tables.length; i++) {
+                const next = tables[i];
+                // Check if tables have same number of columns - if so, merge them
+                if (current.data[0]?.length === next.data[0]?.length) {
+                    current.data = [...current.data, ...next.data];
+                    current.page = `${current.page}-${next.page}`;
+                } else {
+                    merged.push(current);
+                    current = { ...next, data: [...next.data] };
+                }
+            }
+            merged.push(current);
+
+            return merged;
+        }
+
         function cleanTable(tableData) {
-            // Remove empty columns
             const numCols = tableData[0]?.length || 0;
             const nonEmptyCols = [];
 
@@ -462,9 +887,10 @@
                     <div class="table-header">
                         <h3>Table ${index + 1} (Page ${table.page}) - ${table.data.length} rows, ${table.data[0]?.length || 0} columns</h3>
                         <div class="table-actions">
-                            <button class="btn btn-primary" onclick="copyAsText(${index})">Copy as Text</button>
-                            <button class="btn btn-secondary" onclick="copyAsMarkdown(${index})">Copy as Markdown</button>
-                            <button class="btn btn-success" onclick="copyAsCSV(${index})">Copy as CSV</button>
+                            <button class="btn btn-primary btn-sm" onclick="copyAsText(${index})">Copy Text</button>
+                            <button class="btn btn-secondary btn-sm" onclick="copyAsMarkdown(${index})">Copy Markdown</button>
+                            <button class="btn btn-success btn-sm" onclick="copyAsCSV(${index})">Copy CSV</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteTable(${index})">Delete</button>
                         </div>
                     </div>
                     <div class="table-content">
@@ -480,8 +906,251 @@
                 tablesContainer.appendChild(card);
             });
 
-            // Store tables data for copy functions
             window.extractedTables = tables;
+        }
+
+        function deleteTable(index) {
+            window.extractedTables.splice(index, 1);
+            renderTables(window.extractedTables);
+            showToast('Table deleted');
+        }
+
+        // Manual mode functions
+        function renderManualMode() {
+            const rowItems = document.getElementById('row-items');
+            const rowCount = document.getElementById('row-count');
+
+            const visibleRows = manualRows.filter(r => !r.deleted);
+            rowCount.textContent = `(${visibleRows.length} rows)`;
+
+            rowItems.innerHTML = visibleRows.map(row => `
+                <div class="row-item ${row.selected ? 'selected' : ''} ${row.isHeader ? 'marked-header' : ''}" data-id="${row.id}">
+                    <div class="row-checkbox">
+                        <input type="checkbox" ${row.selected ? 'checked' : ''} onchange="toggleRowSelection(${row.id})">
+                    </div>
+                    <div class="row-page">P${row.page}</div>
+                    <div class="row-cells">
+                        ${row.cells.map((cell, cellIndex) => {
+                            const isDeleted = row.deletedCells.has(cellIndex);
+                            const isEmpty = !cell.trim();
+                            return `
+                                <span class="cell-item ${isDeleted ? 'deleted' : ''} ${isEmpty ? 'empty-cell' : ''}"
+                                      onclick="toggleCell(${row.id}, ${cellIndex})"
+                                      title="${escapeHtml(cell || '(empty)')}">
+                                    ${escapeHtml(cell || '(empty)')}
+                                    <button class="delete-cell" onclick="event.stopPropagation(); deleteCell(${row.id}, ${cellIndex})">×</button>
+                                </span>
+                            `;
+                        }).join('')}
+                    </div>
+                    <div class="row-actions">
+                        <button class="btn btn-danger btn-sm" onclick="deleteSingleRow(${row.id})" title="Delete row">×</button>
+                    </div>
+                </div>
+            `).join('');
+
+            updateSelectionInfo();
+            renderCreatedTables();
+        }
+
+        function toggleRowSelection(id) {
+            const row = manualRows.find(r => r.id === id);
+            if (row) {
+                row.selected = !row.selected;
+                renderManualMode();
+            }
+        }
+
+        function toggleCell(rowId, cellIndex) {
+            const row = manualRows.find(r => r.id === rowId);
+            if (row) {
+                if (row.deletedCells.has(cellIndex)) {
+                    row.deletedCells.delete(cellIndex);
+                } else {
+                    row.deletedCells.add(cellIndex);
+                }
+                renderManualMode();
+            }
+        }
+
+        function deleteCell(rowId, cellIndex) {
+            const row = manualRows.find(r => r.id === rowId);
+            if (row) {
+                row.deletedCells.add(cellIndex);
+                renderManualMode();
+            }
+        }
+
+        function deleteSingleRow(id) {
+            const row = manualRows.find(r => r.id === id);
+            if (row) {
+                row.deleted = true;
+                row.selected = false;
+                renderManualMode();
+            }
+        }
+
+        function updateSelectionInfo() {
+            const selectedCount = manualRows.filter(r => r.selected && !r.deleted).length;
+            document.getElementById('selection-info').textContent = `${selectedCount} row${selectedCount !== 1 ? 's' : ''} selected`;
+            document.getElementById('create-table-btn').disabled = selectedCount < 1;
+            document.getElementById('mark-header-btn').disabled = selectedCount !== 1;
+            document.getElementById('delete-rows-btn').disabled = selectedCount < 1;
+        }
+
+        function selectAll() {
+            manualRows.forEach(row => {
+                if (!row.deleted) row.selected = true;
+            });
+            renderManualMode();
+        }
+
+        function selectNone() {
+            manualRows.forEach(row => row.selected = false);
+            renderManualMode();
+        }
+
+        function restoreAllRows() {
+            manualRows.forEach(row => {
+                row.deleted = false;
+                row.deletedCells.clear();
+            });
+            renderManualMode();
+        }
+
+        function markAsHeader() {
+            const selected = manualRows.filter(r => r.selected && !r.deleted);
+            if (selected.length === 1) {
+                // Toggle header status
+                selected[0].isHeader = !selected[0].isHeader;
+                renderManualMode();
+            }
+        }
+
+        function deleteSelectedRows() {
+            manualRows.forEach(row => {
+                if (row.selected) {
+                    row.deleted = true;
+                    row.selected = false;
+                }
+            });
+            renderManualMode();
+        }
+
+        function createTableFromSelected() {
+            const selected = manualRows.filter(r => r.selected && !r.deleted);
+            if (selected.length === 0) return;
+
+            // Sort by original order
+            selected.sort((a, b) => a.id - b.id);
+
+            // Build table data, excluding deleted cells
+            const tableData = selected.map(row => {
+                return row.cells.map((cell, index) => {
+                    return row.deletedCells.has(index) ? '' : cell;
+                });
+            });
+
+            // Clean the table (remove empty columns)
+            const cleanedData = cleanTable(tableData);
+
+            // Find header row if marked
+            const headerIndex = selected.findIndex(r => r.isHeader);
+
+            const newTable = {
+                id: Date.now(),
+                page: selected[0].page,
+                data: cleanedData,
+                headerIndex: headerIndex >= 0 ? headerIndex : (document.getElementById('first-row-header').checked ? 0 : -1)
+            };
+
+            createdTables.push(newTable);
+
+            // Mark rows as deleted (used)
+            selected.forEach(row => {
+                row.deleted = true;
+                row.selected = false;
+                row.isHeader = false;
+            });
+
+            renderManualMode();
+            showToast('Table created!');
+        }
+
+        function renderCreatedTables() {
+            const section = document.getElementById('created-tables-section');
+            const container = document.getElementById('created-tables-container');
+
+            if (createdTables.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+            container.innerHTML = '';
+
+            createdTables.forEach((table, index) => {
+                const card = document.createElement('div');
+                card.className = 'table-card';
+
+                const headerIndex = table.headerIndex;
+                const headerRow = headerIndex >= 0 ? table.data[headerIndex] : null;
+                const bodyRows = headerIndex >= 0
+                    ? table.data.filter((_, i) => i !== headerIndex)
+                    : table.data;
+
+                card.innerHTML = `
+                    <div class="table-header">
+                        <h3>Table ${index + 1} - ${table.data.length} rows, ${table.data[0]?.length || 0} columns</h3>
+                        <div class="table-actions">
+                            <button class="btn btn-primary btn-sm" onclick="copyCreatedAsText(${index})">Copy Text</button>
+                            <button class="btn btn-secondary btn-sm" onclick="copyCreatedAsMarkdown(${index})">Copy Markdown</button>
+                            <button class="btn btn-success btn-sm" onclick="copyCreatedAsCSV(${index})">Copy CSV</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteCreatedTable(${index})">Delete</button>
+                        </div>
+                    </div>
+                    <div class="table-content">
+                        <table class="extracted-table">
+                            ${headerRow ? `<thead><tr>${headerRow.map(cell => `<th>${escapeHtml(cell)}</th>`).join('')}</tr></thead>` : ''}
+                            <tbody>
+                                ${bodyRows.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function deleteCreatedTable(index) {
+            createdTables.splice(index, 1);
+            renderCreatedTables();
+            showToast('Table deleted');
+        }
+
+        function copyCreatedAsText(index) {
+            const table = createdTables[index];
+            const text = table.data.map(row => row.join('\t')).join('\n');
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Copied as tab-separated text!');
+            });
+        }
+
+        function copyCreatedAsMarkdown(index) {
+            const table = createdTables[index];
+            const markdown = tableToMarkdown(table.data, table.headerIndex >= 0);
+            navigator.clipboard.writeText(markdown).then(() => {
+                showToast('Copied as Markdown!');
+            });
+        }
+
+        function copyCreatedAsCSV(index) {
+            const table = createdTables[index];
+            const csv = tableToCSV(table.data);
+            navigator.clipboard.writeText(csv).then(() => {
+                showToast('Copied as CSV!');
+            });
         }
 
         function escapeHtml(text) {
@@ -501,23 +1170,24 @@
         function copyAsMarkdown(index) {
             const table = window.extractedTables[index];
             const useHeader = document.getElementById('first-row-header').checked;
+            const markdown = tableToMarkdown(table.data, useHeader);
+            navigator.clipboard.writeText(markdown).then(() => {
+                showToast('Copied as Markdown!');
+            });
+        }
+
+        function tableToMarkdown(data, useHeader) {
+            if (data.length === 0) return '';
 
             let markdown = '';
-            const data = table.data;
-
-            if (data.length === 0) return;
 
             if (useHeader) {
-                // Header row
                 markdown += '| ' + data[0].map(cell => cell.replace(/\|/g, '\\|')).join(' | ') + ' |\n';
-                // Separator
                 markdown += '| ' + data[0].map(() => '---').join(' | ') + ' |\n';
-                // Body rows
                 for (let i = 1; i < data.length; i++) {
                     markdown += '| ' + data[i].map(cell => cell.replace(/\|/g, '\\|')).join(' | ') + ' |\n';
                 }
             } else {
-                // No header - still need separator after first row for valid markdown
                 data.forEach((row, i) => {
                     markdown += '| ' + row.map(cell => cell.replace(/\|/g, '\\|')).join(' | ') + ' |\n';
                     if (i === 0) {
@@ -526,26 +1196,26 @@
                 });
             }
 
-            navigator.clipboard.writeText(markdown).then(() => {
-                showToast('Copied as Markdown!');
-            });
+            return markdown;
         }
 
         function copyAsCSV(index) {
             const table = window.extractedTables[index];
-            const csv = table.data.map(row =>
+            const csv = tableToCSV(table.data);
+            navigator.clipboard.writeText(csv).then(() => {
+                showToast('Copied as CSV!');
+            });
+        }
+
+        function tableToCSV(data) {
+            return data.map(row =>
                 row.map(cell => {
-                    // Escape quotes and wrap in quotes if contains comma, quote, or newline
                     if (cell.includes(',') || cell.includes('"') || cell.includes('\n')) {
                         return '"' + cell.replace(/"/g, '""') + '"';
                     }
                     return cell;
                 }).join(',')
             ).join('\n');
-
-            navigator.clipboard.writeText(csv).then(() => {
-                showToast('Copied as CSV!');
-            });
         }
     </script>
 </body>
