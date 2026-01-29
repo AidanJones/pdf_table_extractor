@@ -414,6 +414,30 @@
             margin-bottom: 15px;
             font-size: 18px;
         }
+        .extracted-table td,
+        .extracted-table th {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .extracted-table td:hover,
+        .extracted-table th:hover {
+            background: #e7f3ff;
+        }
+        .extracted-table td.editing,
+        .extracted-table th.editing {
+            padding: 0;
+            background: #fff;
+        }
+        .extracted-table td.editing input,
+        .extracted-table th.editing input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #007bff;
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            box-sizing: border-box;
+        }
     </style>
 </head>
 <body>
@@ -947,9 +971,8 @@
 
             createdTables.push(newTable);
 
-            // Mark rows as deleted (used)
+            // Deselect rows but keep them in the list
             selected.forEach(row => {
-                row.deleted = true;
                 row.selected = false;
                 row.isHeader = false;
             });
@@ -981,6 +1004,15 @@
                     ? table.data.filter((_, i) => i !== headerIndex)
                     : table.data;
 
+                // Build rows with proper indices for editing
+                const headerRowHtml = headerRow ? renderRowWithColspan(headerRow, maxCols, 'th', index, headerIndex) : '';
+                const bodyRowsHtml = bodyRows.map((row, bodyRowIdx) => {
+                    // Calculate actual row index in table.data
+                    const actualRowIndex = headerIndex >= 0 && bodyRowIdx >= headerIndex ? bodyRowIdx + 1 : bodyRowIdx;
+                    const rowIndex = headerIndex >= 0 ? (bodyRowIdx < headerIndex ? bodyRowIdx : bodyRowIdx + 1) : bodyRowIdx;
+                    return `<tr>${renderRowWithColspan(row, maxCols, 'td', index, rowIndex)}</tr>`;
+                }).join('');
+
                 card.innerHTML = `
                     <div class="table-header">
                         <h3>Table ${index + 1} - ${table.data.length} rows, ${maxCols} columns</h3>
@@ -992,10 +1024,10 @@
                         </div>
                     </div>
                     <div class="table-content">
-                        <table class="extracted-table">
-                            ${headerRow ? `<thead><tr>${renderRowWithColspan(headerRow, maxCols, 'th')}</tr></thead>` : ''}
+                        <table class="extracted-table" data-table-index="${index}">
+                            ${headerRow ? `<thead><tr>${headerRowHtml}</tr></thead>` : ''}
                             <tbody>
-                                ${bodyRows.map(row => `<tr>${renderRowWithColspan(row, maxCols, 'td')}</tr>`).join('')}
+                                ${bodyRowsHtml}
                             </tbody>
                         </table>
                     </div>
@@ -1005,22 +1037,24 @@
             });
         }
 
-        function renderRowWithColspan(cells, maxCols, cellTag = 'td') {
+        function renderRowWithColspan(cells, maxCols, cellTag = 'td', tableIndex = 0, rowIndex = 0) {
             const numCells = cells.length;
             if (numCells === 0) return '';
             if (numCells >= maxCols) {
                 // No colspan needed
-                return cells.map(cell => `<${cellTag}>${escapeHtml(cell)}</${cellTag}>`).join('');
+                return cells.map((cell, cellIndex) =>
+                    `<${cellTag} ondblclick="editCreatedTableCell(${tableIndex}, ${rowIndex}, ${cellIndex})" title="Double-click to edit">${escapeHtml(cell)}</${cellTag}>`
+                ).join('');
             }
 
             // Calculate colspan for each cell to fill maxCols
             const baseColspan = Math.floor(maxCols / numCells);
             const remainder = maxCols % numCells;
 
-            return cells.map((cell, index) => {
+            return cells.map((cell, cellIndex) => {
                 // Distribute extra columns to first 'remainder' cells
-                const colspan = baseColspan + (index < remainder ? 1 : 0);
-                return `<${cellTag} colspan="${colspan}">${escapeHtml(cell)}</${cellTag}>`;
+                const colspan = baseColspan + (cellIndex < remainder ? 1 : 0);
+                return `<${cellTag} colspan="${colspan}" ondblclick="editCreatedTableCell(${tableIndex}, ${rowIndex}, ${cellIndex})" title="Double-click to edit">${escapeHtml(cell)}</${cellTag}>`;
             }).join('');
         }
 
@@ -1028,6 +1062,55 @@
             createdTables.splice(index, 1);
             renderCreatedTables();
             showToast('Table deleted');
+        }
+
+        function editCreatedTableCell(tableIndex, rowIndex, cellIndex) {
+            const table = createdTables[tableIndex];
+            if (!table || !table.data[rowIndex]) return;
+
+            const currentText = table.data[rowIndex][cellIndex] || '';
+
+            // Find the cell element
+            const tableEl = document.querySelector(`[data-table-index="${tableIndex}"]`);
+            if (!tableEl) return;
+
+            // Find all cells and locate the right one
+            const allCells = tableEl.querySelectorAll('th, td');
+            let targetCell = null;
+            let cellCounter = 0;
+
+            // Count through rows to find the correct cell
+            for (const row of tableEl.querySelectorAll('tr')) {
+                const cells = row.querySelectorAll('th, td');
+                for (const cell of cells) {
+                    const onclick = cell.getAttribute('ondblclick');
+                    if (onclick && onclick.includes(`${tableIndex}, ${rowIndex}, ${cellIndex}`)) {
+                        targetCell = cell;
+                        break;
+                    }
+                }
+                if (targetCell) break;
+            }
+
+            if (!targetCell || targetCell.classList.contains('editing')) return;
+
+            targetCell.classList.add('editing');
+            const escapedText = escapeHtml(currentText).replace(/'/g, "\\'");
+            targetCell.innerHTML = `<input type="text" value="${escapeHtml(currentText)}"
+                onblur="saveCreatedTableCell(${tableIndex}, ${rowIndex}, ${cellIndex}, this.value)"
+                onkeydown="if(event.key==='Enter'){this.blur();}if(event.key==='Escape'){this.value='${escapedText}';this.blur();}">`;
+
+            const input = targetCell.querySelector('input');
+            input.focus();
+            input.select();
+        }
+
+        function saveCreatedTableCell(tableIndex, rowIndex, cellIndex, newValue) {
+            const table = createdTables[tableIndex];
+            if (table && table.data[rowIndex]) {
+                table.data[rowIndex][cellIndex] = newValue;
+                renderCreatedTables();
+            }
         }
 
         function copyCreatedAsText(index) {
