@@ -360,6 +360,19 @@
         .cell-item:hover .delete-cell {
             display: block;
         }
+        .cell-item.editing {
+            background: #fff;
+            border: 2px solid #007bff;
+            padding: 3px 8px;
+        }
+        .cell-item input {
+            border: none;
+            background: transparent;
+            font-size: 13px;
+            font-family: inherit;
+            width: 100%;
+            outline: none;
+        }
         .row-actions {
             padding: 8px;
             display: flex;
@@ -444,6 +457,9 @@
             </button>
             <button class="btn btn-warning btn-sm" onclick="markAsHeader()" id="mark-header-btn" disabled>
                 Mark as Header
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="mergeSelectedRows()" id="merge-rows-btn" disabled>
+                Merge Selected
             </button>
             <button class="btn btn-danger btn-sm" onclick="deleteSelectedRows()" id="delete-rows-btn" disabled>
                 Delete Selected Rows
@@ -698,7 +714,8 @@
                             return `
                                 <span class="cell-item ${isDeleted ? 'deleted' : ''} ${isEmpty ? 'empty-cell' : ''}"
                                       onclick="toggleCell(${row.id}, ${cellIndex})"
-                                      title="${escapeHtml(cell || '(empty)')}">
+                                      ondblclick="event.stopPropagation(); editCell(${row.id}, ${cellIndex})"
+                                      title="Double-click to edit. ${escapeHtml(cell || '(empty)')}">
                                     ${escapeHtml(cell || '(empty)')}
                                     <button class="delete-cell" onclick="event.stopPropagation(); deleteCell(${row.id}, ${cellIndex})">×</button>
                                 </span>
@@ -706,6 +723,7 @@
                         }).join('')}
                     </div>
                     <div class="row-actions">
+                        <button class="btn btn-outline btn-sm" onclick="duplicateRow(${row.id})" title="Duplicate row">⧉</button>
                         <button class="btn btn-danger btn-sm" onclick="deleteSingleRow(${row.id})" title="Delete row">×</button>
                     </div>
                 </div>
@@ -765,6 +783,7 @@
             document.getElementById('selection-info').textContent = `${selectedCount} row${selectedCount !== 1 ? 's' : ''} selected`;
             document.getElementById('create-table-btn').disabled = selectedCount < 1;
             document.getElementById('mark-header-btn').disabled = selectedCount !== 1;
+            document.getElementById('merge-rows-btn').disabled = selectedCount < 2;
             document.getElementById('delete-rows-btn').disabled = selectedCount < 1;
         }
 
@@ -813,6 +832,91 @@
                 }
             });
             renderManualMode();
+        }
+
+        function duplicateRow(id) {
+            const row = manualRows.find(r => r.id === id);
+            if (!row) return;
+
+            // Create a new row with a unique ID
+            const newId = Math.max(...manualRows.map(r => r.id)) + 1;
+            const newRow = {
+                ...row,
+                id: newId,
+                cells: [...row.cells],
+                selected: false,
+                deleted: false,
+                isHeader: false,
+                deletedCells: new Set(row.deletedCells)
+            };
+
+            // Insert after the original row
+            const originalIndex = manualRows.findIndex(r => r.id === id);
+            manualRows.splice(originalIndex + 1, 0, newRow);
+
+            renderManualMode();
+            showToast('Row duplicated');
+        }
+
+        function mergeSelectedRows() {
+            const selected = manualRows.filter(r => r.selected && !r.deleted);
+            if (selected.length < 2) return;
+
+            // Sort by display order (original order in array)
+            selected.sort((a, b) => manualRows.indexOf(a) - manualRows.indexOf(b));
+
+            // Merge cells by concatenating text in each column position
+            const firstRow = selected[0];
+            const maxCells = Math.max(...selected.map(r => r.cells.length));
+
+            const mergedCells = [];
+            for (let i = 0; i < maxCells; i++) {
+                const cellTexts = selected
+                    .filter(r => !r.deletedCells.has(i) && r.cells[i] && r.cells[i].trim())
+                    .map(r => r.cells[i]?.trim() || '');
+                mergedCells.push(cellTexts.join(' '));
+            }
+
+            // Update first row with merged content
+            firstRow.cells = mergedCells;
+            firstRow.deletedCells = new Set();
+            firstRow.selected = false;
+
+            // Delete other selected rows
+            selected.slice(1).forEach(row => {
+                row.deleted = true;
+                row.selected = false;
+            });
+
+            renderManualMode();
+            showToast('Rows merged');
+        }
+
+        function editCell(rowId, cellIndex) {
+            const row = manualRows.find(r => r.id === rowId);
+            if (!row || row.deletedCells.has(cellIndex)) return;
+
+            const cellElements = document.querySelectorAll(`[data-id="${rowId}"] .cell-item`);
+            const cellElement = cellElements[cellIndex];
+            if (!cellElement || cellElement.classList.contains('editing')) return;
+
+            const currentText = row.cells[cellIndex] || '';
+            cellElement.classList.add('editing');
+            cellElement.innerHTML = `<input type="text" value="${escapeHtml(currentText)}"
+                onblur="saveCell(${rowId}, ${cellIndex}, this.value)"
+                onkeydown="if(event.key==='Enter'){this.blur();}if(event.key==='Escape'){this.value='${escapeHtml(currentText).replace(/'/g, "\\'")}';this.blur();}">`;
+
+            const input = cellElement.querySelector('input');
+            input.focus();
+            input.select();
+        }
+
+        function saveCell(rowId, cellIndex, newValue) {
+            const row = manualRows.find(r => r.id === rowId);
+            if (row) {
+                row.cells[cellIndex] = newValue;
+                renderManualMode();
+            }
         }
 
         function createTableFromSelected() {
