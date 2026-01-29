@@ -678,18 +678,6 @@
             return 0;
         }
 
-        function cleanTable(tableData) {
-            const numCols = tableData[0]?.length || 0;
-            const nonEmptyCols = [];
-
-            for (let col = 0; col < numCols; col++) {
-                const hasContent = tableData.some(row => row[col]?.trim());
-                if (hasContent) nonEmptyCols.push(col);
-            }
-
-            return tableData.map(row => nonEmptyCols.map(col => row[col] || ''));
-        }
-
         function renderManualMode() {
             const rowItems = document.getElementById('row-items');
             const rowCount = document.getElementById('row-count');
@@ -731,6 +719,14 @@
             const row = manualRows.find(r => r.id === id);
             if (row) {
                 row.selected = !row.selected;
+                // When selecting a row, auto-exclude empty cells
+                if (row.selected) {
+                    row.cells.forEach((cell, index) => {
+                        if (!cell.trim()) {
+                            row.deletedCells.add(index);
+                        }
+                    });
+                }
                 renderManualMode();
             }
         }
@@ -774,7 +770,15 @@
 
         function selectAll() {
             manualRows.forEach(row => {
-                if (!row.deleted) row.selected = true;
+                if (!row.deleted) {
+                    row.selected = true;
+                    // Auto-exclude empty cells
+                    row.cells.forEach((cell, index) => {
+                        if (!cell.trim()) {
+                            row.deletedCells.add(index);
+                        }
+                    });
+                }
             });
             renderManualMode();
         }
@@ -818,15 +822,13 @@
             // Sort by original order
             selected.sort((a, b) => a.id - b.id);
 
-            // Build table data, excluding deleted cells
+            // Build table data, filtering out deleted cells entirely
             const tableData = selected.map(row => {
-                return row.cells.map((cell, index) => {
-                    return row.deletedCells.has(index) ? '' : cell;
-                });
+                return row.cells.filter((cell, index) => !row.deletedCells.has(index));
             });
 
-            // Clean the table (remove empty columns)
-            const cleanedData = cleanTable(tableData);
+            // Calculate max columns based on highest number of cells in any row
+            const maxCols = Math.max(...tableData.map(row => row.length));
 
             // Find header row if marked
             const headerIndex = selected.findIndex(r => r.isHeader);
@@ -834,7 +836,8 @@
             const newTable = {
                 id: Date.now(),
                 page: selected[0].page,
-                data: cleanedData,
+                data: tableData,
+                maxCols: maxCols,
                 headerIndex: headerIndex >= 0 ? headerIndex : (document.getElementById('first-row-header').checked ? 0 : -1)
             };
 
@@ -868,6 +871,7 @@
                 card.className = 'table-card';
 
                 const headerIndex = table.headerIndex;
+                const maxCols = table.maxCols || Math.max(...table.data.map(r => r.length));
                 const headerRow = headerIndex >= 0 ? table.data[headerIndex] : null;
                 const bodyRows = headerIndex >= 0
                     ? table.data.filter((_, i) => i !== headerIndex)
@@ -875,7 +879,7 @@
 
                 card.innerHTML = `
                     <div class="table-header">
-                        <h3>Table ${index + 1} - ${table.data.length} rows, ${table.data[0]?.length || 0} columns</h3>
+                        <h3>Table ${index + 1} - ${table.data.length} rows, ${maxCols} columns</h3>
                         <div class="table-actions">
                             <button class="btn btn-primary btn-sm" onclick="copyCreatedAsText(${index})">Copy Text</button>
                             <button class="btn btn-secondary btn-sm" onclick="copyCreatedAsMarkdown(${index})">Copy Markdown</button>
@@ -885,9 +889,9 @@
                     </div>
                     <div class="table-content">
                         <table class="extracted-table">
-                            ${headerRow ? `<thead><tr>${headerRow.map(cell => `<th>${escapeHtml(cell)}</th>`).join('')}</tr></thead>` : ''}
+                            ${headerRow ? `<thead><tr>${renderRowWithColspan(headerRow, maxCols, 'th')}</tr></thead>` : ''}
                             <tbody>
-                                ${bodyRows.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}
+                                ${bodyRows.map(row => `<tr>${renderRowWithColspan(row, maxCols, 'td')}</tr>`).join('')}
                             </tbody>
                         </table>
                     </div>
@@ -895,6 +899,25 @@
 
                 container.appendChild(card);
             });
+        }
+
+        function renderRowWithColspan(cells, maxCols, cellTag = 'td') {
+            const numCells = cells.length;
+            if (numCells === 0) return '';
+            if (numCells >= maxCols) {
+                // No colspan needed
+                return cells.map(cell => `<${cellTag}>${escapeHtml(cell)}</${cellTag}>`).join('');
+            }
+
+            // Calculate colspan for each cell to fill maxCols
+            const baseColspan = Math.floor(maxCols / numCells);
+            const remainder = maxCols % numCells;
+
+            return cells.map((cell, index) => {
+                // Distribute extra columns to first 'remainder' cells
+                const colspan = baseColspan + (index < remainder ? 1 : 0);
+                return `<${cellTag} colspan="${colspan}">${escapeHtml(cell)}</${cellTag}>`;
+            }).join('');
         }
 
         function deleteCreatedTable(index) {
@@ -905,7 +928,9 @@
 
         function copyCreatedAsText(index) {
             const table = createdTables[index];
-            const text = table.data.map(row => row.join('\t')).join('\n');
+            const maxCols = table.maxCols || Math.max(...table.data.map(r => r.length));
+            const paddedData = padTableData(table.data, maxCols);
+            const text = paddedData.map(row => row.join('\t')).join('\n');
             navigator.clipboard.writeText(text).then(() => {
                 showToast('Copied as tab-separated text!');
             });
@@ -913,7 +938,9 @@
 
         function copyCreatedAsMarkdown(index) {
             const table = createdTables[index];
-            const markdown = tableToMarkdown(table.data, table.headerIndex >= 0);
+            const maxCols = table.maxCols || Math.max(...table.data.map(r => r.length));
+            const paddedData = padTableData(table.data, maxCols);
+            const markdown = tableToMarkdown(paddedData, table.headerIndex >= 0);
             navigator.clipboard.writeText(markdown).then(() => {
                 showToast('Copied as Markdown!');
             });
@@ -921,9 +948,22 @@
 
         function copyCreatedAsCSV(index) {
             const table = createdTables[index];
-            const csv = tableToCSV(table.data);
+            const maxCols = table.maxCols || Math.max(...table.data.map(r => r.length));
+            const paddedData = padTableData(table.data, maxCols);
+            const csv = tableToCSV(paddedData);
             navigator.clipboard.writeText(csv).then(() => {
                 showToast('Copied as CSV!');
+            });
+        }
+
+        function padTableData(data, maxCols) {
+            return data.map(row => {
+                if (row.length >= maxCols) return row;
+                const padded = [...row];
+                while (padded.length < maxCols) {
+                    padded.push('');
+                }
+                return padded;
             });
         }
 
