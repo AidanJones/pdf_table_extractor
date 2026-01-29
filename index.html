@@ -76,33 +76,6 @@
             background: #d4edda;
             color: #155724;
         }
-        .mode-toggle {
-            display: flex;
-            gap: 0;
-            margin: 20px 0;
-            background: #fff;
-            border-radius: 8px;
-            overflow: hidden;
-            width: fit-content;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .mode-btn {
-            padding: 12px 24px;
-            border: none;
-            background: #fff;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            color: #666;
-            transition: all 0.2s;
-        }
-        .mode-btn:hover {
-            background: #f5f5f5;
-        }
-        .mode-btn.active {
-            background: #007bff;
-            color: white;
-        }
         .settings {
             background: #fff;
             padding: 15px 20px;
@@ -250,14 +223,6 @@
         .extracted-table tr:hover {
             background: #f5f5f5;
         }
-        .no-tables {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-            background: #fff;
-            border-radius: 8px;
-            margin-top: 20px;
-        }
         .copy-toast {
             position: fixed;
             bottom: 20px;
@@ -274,19 +239,6 @@
             opacity: 1;
         }
 
-        /* Manual mode styles */
-        .manual-container {
-            display: none;
-        }
-        .manual-container.active {
-            display: block;
-        }
-        .auto-container.active {
-            display: block;
-        }
-        .auto-container {
-            display: none;
-        }
         .manual-toolbar {
             background: #fff;
             padding: 15px 20px;
@@ -453,17 +405,12 @@
 </head>
 <body>
     <h1>PDF Table Extractor</h1>
-    <p class="subtitle">Upload a PDF to extract tables. Use Auto mode for quick extraction or Manual mode for fine control.</p>
+    <p class="subtitle">Upload a PDF to extract tables with fine-grained control over row and cell selection.</p>
 
     <div class="drop-zone" id="drop-zone">
         <p id="drop-zone-text">Drag & drop a PDF file here</p>
         <p><small>or click to select a file</small></p>
         <input type="file" id="file-input" accept=".pdf,application/pdf">
-    </div>
-
-    <div class="mode-toggle">
-        <button class="mode-btn active" id="auto-mode-btn" onclick="setMode('auto')">Auto Extract</button>
-        <button class="mode-btn" id="manual-mode-btn" onclick="setMode('manual')">Manual Mode</button>
     </div>
 
     <div class="settings" id="settings">
@@ -480,18 +427,6 @@
                 Column tolerance:
                 <input type="number" id="col-tolerance" value="15" min="5" max="100" title="X-distance tolerance for detecting columns">
             </label>
-            <label>
-                Min columns:
-                <input type="number" id="min-cols" value="2" min="1" max="20">
-            </label>
-            <label>
-                Min rows:
-                <input type="number" id="min-rows" value="2" min="1" max="100">
-            </label>
-            <label>
-                <input type="checkbox" id="merge-adjacent" checked>
-                Merge adjacent tables
-            </label>
         </div>
         <button class="btn btn-primary" id="re-extract-btn" onclick="reExtract()" style="display: none;">
             Re-extract with new settings
@@ -500,13 +435,7 @@
 
     <div class="status" id="status"></div>
 
-    <!-- Auto mode container -->
-    <div class="auto-container active" id="auto-container">
-        <div class="tables-container" id="tables-container"></div>
-    </div>
-
-    <!-- Manual mode container -->
-    <div class="manual-container" id="manual-container">
+    <div id="manual-container">
         <div class="manual-toolbar">
             <span class="selection-info" id="selection-info">0 rows selected</span>
             <div class="divider"></div>
@@ -547,15 +476,13 @@
         const dropZoneText = document.getElementById('drop-zone-text');
         const fileInput = document.getElementById('file-input');
         const status = document.getElementById('status');
-        const tablesContainer = document.getElementById('tables-container');
         const copyToast = document.getElementById('copy-toast');
         const reExtractBtn = document.getElementById('re-extract-btn');
 
         let currentFile = null;
-        let currentMode = 'auto';
         let rawRows = []; // All detected rows from PDF
-        let manualRows = []; // Rows for manual mode with selection state
-        let createdTables = []; // Tables created in manual mode
+        let manualRows = []; // Rows with selection state
+        let createdTables = []; // Tables created from selected rows
 
         // Drop zone events
         dropZone.addEventListener('click', () => fileInput.click());
@@ -599,27 +526,6 @@
             }
         }
 
-        function setMode(mode) {
-            currentMode = mode;
-            document.getElementById('auto-mode-btn').classList.toggle('active', mode === 'auto');
-            document.getElementById('manual-mode-btn').classList.toggle('active', mode === 'manual');
-            document.getElementById('auto-container').classList.toggle('active', mode === 'auto');
-            document.getElementById('manual-container').classList.toggle('active', mode === 'manual');
-
-            // Update settings visibility based on mode
-            document.getElementById('min-cols').closest('label').style.display = mode === 'auto' ? 'flex' : 'none';
-            document.getElementById('min-rows').closest('label').style.display = mode === 'auto' ? 'flex' : 'none';
-            document.getElementById('merge-adjacent').closest('label').style.display = mode === 'auto' ? 'flex' : 'none';
-
-            if (currentFile && rawRows.length > 0) {
-                if (mode === 'manual') {
-                    renderManualMode();
-                } else {
-                    reExtract();
-                }
-            }
-        }
-
         function showStatus(message, type) {
             status.textContent = message;
             status.className = 'status ' + type;
@@ -639,9 +545,9 @@
 
         async function processPDF(file) {
             showStatus('Processing PDF...', 'loading');
-            tablesContainer.innerHTML = '';
             rawRows = [];
             manualRows = [];
+            createdTables = [];
 
             const rowTolerance = parseInt(document.getElementById('row-tolerance').value) || 5;
             const colTolerance = parseInt(document.getElementById('col-tolerance').value) || 15;
@@ -663,7 +569,7 @@
                     return;
                 }
 
-                // Initialize manual rows
+                // Initialize rows with selection state
                 manualRows = rawRows.map((row, index) => ({
                     ...row,
                     id: index,
@@ -673,19 +579,8 @@
                     deletedCells: new Set()
                 }));
 
-                if (currentMode === 'auto') {
-                    const tables = buildTablesFromRows(rawRows);
-                    if (tables.length === 0) {
-                        showStatus('No tables found. Try adjusting settings or use Manual Mode.', 'error');
-                        tablesContainer.innerHTML = '<div class="no-tables">No tables detected. Try adjusting the tolerance/min columns/rows settings, or switch to Manual Mode for fine-grained control.</div>';
-                    } else {
-                        showStatus(`Found ${tables.length} table(s)!`, 'success');
-                        renderTables(tables);
-                    }
-                } else {
-                    showStatus(`Extracted ${rawRows.length} rows. Select rows to create tables.`, 'success');
-                    renderManualMode();
-                }
+                showStatus(`Extracted ${rawRows.length} rows. Select rows to create tables.`, 'success');
+                renderManualMode();
             } catch (error) {
                 console.error(error);
                 showStatus('Error processing PDF: ' + error.message, 'error');
@@ -783,83 +678,6 @@
             return 0;
         }
 
-        function buildTablesFromRows(rows) {
-            const minCols = parseInt(document.getElementById('min-cols').value) || 2;
-            const minRows = parseInt(document.getElementById('min-rows').value) || 2;
-            const mergeAdjacent = document.getElementById('merge-adjacent').checked;
-
-            const tables = [];
-            let currentTable = [];
-            let currentPage = null;
-
-            rows.forEach((row, index) => {
-                const filledCells = row.cells.filter(cell => cell.trim() !== '').length;
-                const isTableRow = filledCells >= minCols;
-
-                if (isTableRow) {
-                    // Check if we should start a new table (different page and not merging)
-                    if (currentTable.length > 0 && row.page !== currentPage && !mergeAdjacent) {
-                        if (currentTable.length >= minRows) {
-                            tables.push({
-                                page: currentPage,
-                                data: cleanTable(currentTable.map(r => r.cells))
-                            });
-                        }
-                        currentTable = [];
-                    }
-                    currentTable.push(row);
-                    currentPage = row.page;
-                } else {
-                    // Non-table row - end current table
-                    if (currentTable.length >= minRows) {
-                        tables.push({
-                            page: currentTable[0].page,
-                            data: cleanTable(currentTable.map(r => r.cells))
-                        });
-                    }
-                    currentTable = [];
-                    currentPage = null;
-                }
-            });
-
-            // Don't forget the last table
-            if (currentTable.length >= minRows) {
-                tables.push({
-                    page: currentTable[0].page,
-                    data: cleanTable(currentTable.map(r => r.cells))
-                });
-            }
-
-            // Merge adjacent tables if enabled
-            if (mergeAdjacent && tables.length > 1) {
-                return mergeAdjacentTables(tables);
-            }
-
-            return tables;
-        }
-
-        function mergeAdjacentTables(tables) {
-            if (tables.length <= 1) return tables;
-
-            const merged = [];
-            let current = { ...tables[0], data: [...tables[0].data] };
-
-            for (let i = 1; i < tables.length; i++) {
-                const next = tables[i];
-                // Check if tables have same number of columns - if so, merge them
-                if (current.data[0]?.length === next.data[0]?.length) {
-                    current.data = [...current.data, ...next.data];
-                    current.page = `${current.page}-${next.page}`;
-                } else {
-                    merged.push(current);
-                    current = { ...next, data: [...next.data] };
-                }
-            }
-            merged.push(current);
-
-            return merged;
-        }
-
         function cleanTable(tableData) {
             const numCols = tableData[0]?.length || 0;
             const nonEmptyCols = [];
@@ -872,50 +690,6 @@
             return tableData.map(row => nonEmptyCols.map(col => row[col] || ''));
         }
 
-        function renderTables(tables) {
-            tablesContainer.innerHTML = '';
-
-            tables.forEach((table, index) => {
-                const card = document.createElement('div');
-                card.className = 'table-card';
-
-                const useHeader = document.getElementById('first-row-header').checked;
-                const headerRow = useHeader ? table.data[0] : null;
-                const bodyRows = useHeader ? table.data.slice(1) : table.data;
-
-                card.innerHTML = `
-                    <div class="table-header">
-                        <h3>Table ${index + 1} (Page ${table.page}) - ${table.data.length} rows, ${table.data[0]?.length || 0} columns</h3>
-                        <div class="table-actions">
-                            <button class="btn btn-primary btn-sm" onclick="copyAsText(${index})">Copy Text</button>
-                            <button class="btn btn-secondary btn-sm" onclick="copyAsMarkdown(${index})">Copy Markdown</button>
-                            <button class="btn btn-success btn-sm" onclick="copyAsCSV(${index})">Copy CSV</button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteTable(${index})">Delete</button>
-                        </div>
-                    </div>
-                    <div class="table-content">
-                        <table class="extracted-table" id="table-${index}">
-                            ${headerRow ? `<thead><tr>${headerRow.map(cell => `<th>${escapeHtml(cell)}</th>`).join('')}</tr></thead>` : ''}
-                            <tbody>
-                                ${bodyRows.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-
-                tablesContainer.appendChild(card);
-            });
-
-            window.extractedTables = tables;
-        }
-
-        function deleteTable(index) {
-            window.extractedTables.splice(index, 1);
-            renderTables(window.extractedTables);
-            showToast('Table deleted');
-        }
-
-        // Manual mode functions
         function renderManualMode() {
             const rowItems = document.getElementById('row-items');
             const rowCount = document.getElementById('row-count');
@@ -1159,23 +933,6 @@
             return div.innerHTML;
         }
 
-        function copyAsText(index) {
-            const table = window.extractedTables[index];
-            const text = table.data.map(row => row.join('\t')).join('\n');
-            navigator.clipboard.writeText(text).then(() => {
-                showToast('Copied as tab-separated text!');
-            });
-        }
-
-        function copyAsMarkdown(index) {
-            const table = window.extractedTables[index];
-            const useHeader = document.getElementById('first-row-header').checked;
-            const markdown = tableToMarkdown(table.data, useHeader);
-            navigator.clipboard.writeText(markdown).then(() => {
-                showToast('Copied as Markdown!');
-            });
-        }
-
         function tableToMarkdown(data, useHeader) {
             if (data.length === 0) return '';
 
@@ -1197,14 +954,6 @@
             }
 
             return markdown;
-        }
-
-        function copyAsCSV(index) {
-            const table = window.extractedTables[index];
-            const csv = tableToCSV(table.data);
-            navigator.clipboard.writeText(csv).then(() => {
-                showToast('Copied as CSV!');
-            });
         }
 
         function tableToCSV(data) {
